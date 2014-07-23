@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 from django.core.handlers.wsgi import STATUS_CODE_TEXT
 from django.template.response import SimpleTemplateResponse
 from rest_framework.compat import six
+from django import VERSION as DJANGO_VERSION
 
 
 class Response(SimpleTemplateResponse):
@@ -82,7 +83,20 @@ class Response(SimpleTemplateResponse):
         Remove attributes from the response that shouldn't be cached
         """
         state = super(Response, self).__getstate__()
-        for key in ('accepted_renderer', 'renderer_context', 'data'):
-            if key in state:
-                del state[key]
+        if DJANGO_VERSION < (1, 4):
+            #apply the same logic django > 1.4 implements
+            for key in self.rendering_attrs:
+                if key in state:
+                    del state[key]
         return state
+
+    @property
+    def rendering_attrs(self):
+        '''
+        getter to support django <= 1.4 implementing the same interfac
+        '''
+        attrs = ['accepted_renderer', 'renderer_context', 'data']
+        if DJANGO_VERSION < (1, 4):
+            return attrs
+
+        return SimpleTemplateResponse.rendering_attrs + attrs
